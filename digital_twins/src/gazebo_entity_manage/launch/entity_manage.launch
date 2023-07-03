@@ -1,0 +1,6 @@
+<launch>
+    <node name="entity_manager" pkg="gazebo_entity_manage" exec="entity_manage_node" output="screen" >
+        <param name="models_folder" value="$(find-pkg-share gazebo_entity_manage)/urdf"/>
+    </node>
+    <node name="rosbridge_server" pkg="rosbridge_server" exec="rosbridge_websocket"/>
+</launch>

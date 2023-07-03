@@ -1,0 +1,6 @@
+string entity_name
+string model_type
+string robot_namespace
+string reference_frame
+---
+bool success

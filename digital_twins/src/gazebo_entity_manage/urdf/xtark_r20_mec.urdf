@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+
+<robot name="xtark_robot">
+
+    <link name="base_footprint">
+        <visual>
+            <geometry>
+                <sphere radius="0.001" />
+            </geometry>
+        </visual>
+    </link>
+
+    <link name="base_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/base_r20_mec.stl" />
+            </geometry>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <material name="base_color">
+                <!-- <color rgba="0.2196 0.557 0.557 1" /> -->
+                <!-- <color rgba="0.545 0.506 0.298 1" /> -->
+                <color rgba="0.8 0.8 0.8 1" />
+               
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/base_r20_mec.stl" />
+            </geometry>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <material name="base_color">
+                <color rgba="0.8 0.8 0.8 1" />
+            </material>
+        </collision>
+        <inertial>
+            <!-- <origin xyz="-0.016347 0.00073329 0.026157" rpy="0 0 0" /> -->
+            <!-- <origin xyz="0.0435 0 -0.08" rpy="0 0 0" /> -->
+            <origin xyz="0.0435 0 0" rpy="0 0 0" />
+            <mass value="2.8" />
+            <inertia ixx="0.0039433333333333325" ixy = "0" ixz = "0"
+                iyy="0.012926666666666668" iyz = "0"
+                izz="0.015703333333333333" />
+        </inertial>
+    </link>    
+
+    <link name="laser_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/laser.stl" />
+            </geometry>
+            <origin xyz="0 0 -0.06" rpy="0 0 0" />
+            <material name="laser_color">
+                <color rgba="0.4 0.4 0.4 1" />
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/laser.stl" />
+            </geometry>
+            <origin xyz="0 0 -0.06" rpy="0 0 0" />
+            <material name="laser_color">
+                <color rgba="0.4 0.4 0.4 1" />
+            </material>
+        </collision>
+    </link> 
+
+    <link name="camera_link">
+        <visual>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/depthcamera.stl" />
+            </geometry>
+            <origin xyz="-0.037 0 0" rpy="0 0 0" />
+            <material name="camera_color">
+                <color rgba="0.15 0.15 0.15 1" />
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <mesh filename="package://gazebo_entity_manage/meshes/depthcamera.stl" />
+            </geometry>
+            <origin xyz="-0.037 0 0" rpy="0 0 0" />
+            <material name="camera_color">
+                <color rgba="0.15 0.15 0.15 1" />
+            </material>
+        </collision>
+    </link>
+
+    <link name="imu_link">
+        <visual>
+            <geometry>
+                <sphere radius="0.010" />
+            </geometry>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <material name="imu_color">
+                <color rgba="1 1 0 1" />
+            </material>
+        </visual>
+        <collision>
+            <geometry>
+                <sphere radius="0.010" />
+            </geometry>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <material name="imu_color">
+                <color rgba="1 1 0 1" />
+            </material>
+        </collision>
+    </link>
+
+    <joint name="baselink2footprint" type="fixed">
+        <origin xyz="0 0 0.1255" rpy="0 0 0"/>
+        <parent link="base_footprint" />
+        <child  link="base_link" />
+    </joint>
+
+    <joint name="laser2base" type="fixed">
+        <origin xyz="0 0 0.06" rpy="0 0 0"/>
+        <parent link="base_link" />
+        <child  link="laser_link" />
+    </joint>
+
+    <joint name="camera2base" type="fixed">
+        <origin xyz="0.105 0 0.0285" rpy="0 0 0"/>
+        <parent link="base_link" />
+        <child  link="camera_link" />
+    </joint>
+
+    <joint name="imu2base" type="fixed">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="base_link" />
+        <child  link="imu_link" />
+    </joint>
+
+</robot>

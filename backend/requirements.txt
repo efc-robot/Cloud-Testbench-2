@@ -1,0 +1,11 @@
+asgi_lifespan==2.0.0
+netifaces==0.10.4
+pydantic==1.10.5
+PyJWT==1.7.1
+pytest==4.6.9
+fastapi
+uvicorn
+tortoise-orm
+PyJWT==1.7.1
+docker
+aiomysql

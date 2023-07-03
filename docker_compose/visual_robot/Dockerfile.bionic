@@ -1,0 +1,178 @@
+FROM ghcr.io/linuxserver/baseimage-ubuntu:bionic
+# FROM ubuntu:bionic
+
+# set version label
+ARG BUILD_DATE
+ARG VERSION
+ARG CODE_RELEASE
+LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
+LABEL maintainer="aptalca"
+
+# environment settings
+ENV HOME="/config"
+
+##################################################### 
+# essential tools
+##################################################### 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    nginx \
+    vim \
+    iputils-ping \
+    curl \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+##################################################### 
+# code-server
+##################################################### 
+RUN \
+  echo "**** install node repo ****" && \
+  apt-get update && \
+  apt-get install -y \
+    gnupg && \
+  curl -s https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add - && \
+  echo 'deb https://deb.nodesource.com/node_16.x bionic main' \
+    > /etc/apt/sources.list.d/nodesource.list && \
+  curl -s https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - && \
+  echo 'deb https://dl.yarnpkg.com/debian/ stable main' \
+    > /etc/apt/sources.list.d/yarn.list && \
+  echo "**** install build dependencies ****" && \
+  apt-get update && \
+  apt-get install -y \
+    build-essential \
+    libx11-dev \
+    libxkbfile-dev \
+    libsecret-1-dev \
+    pkg-config && \
+  echo "**** install runtime dependencies ****" && \
+  apt-get install -y \
+    git \
+    jq \
+    nano \
+    net-tools \
+    nodejs \
+    sudo \
+    yarn && \
+  echo "**** install code-server ****" && \
+  if [ -z ${CODE_RELEASE+x} ]; then \
+    CODE_RELEASE=$(curl -sX GET https://registry.yarnpkg.com/code-server \
+    | jq -r '."dist-tags".latest' | sed 's|^|v|'); \
+  fi && \
+  CODE_VERSION=$(echo "$CODE_RELEASE" | awk '{print substr($1,2); }') && \
+  yarn config set network-timeout 600000 -g && \
+  yarn --production --verbose --frozen-lockfile global add code-server@"$CODE_VERSION" && \
+  yarn cache clean && \
+  echo "**** clean up ****" && \
+  apt-get purge --auto-remove -y \
+    build-essential \
+    libx11-dev \
+    libxkbfile-dev \
+    libsecret-1-dev \
+    pkg-config && \
+  apt-get clean && \
+  rm -rf \
+    /tmp/* \
+    /var/lib/apt/lists/* \
+    /var/tmp/*
+
+# add local files
+COPY /ubuntu_bionic/root /
+
+##################################################### 
+# ROS
+##################################################### 
+# setup timezone
+RUN echo 'Etc/UTC' > /etc/timezone && \
+    # ln -s /usr/share/zoneinfo/Etc/UTC /etc/localtime && \
+    apt-get update && \
+    apt-get install -q -y --no-install-recommends tzdata && \
+    rm -rf /var/lib/apt/lists/*
+
+# install packages
+RUN apt-get update && apt-get install -q -y --no-install-recommends \
+    dirmngr \
+    gnupg2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# setup sources.list
+RUN echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/ros1-latest.list
+
+# setup keys
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654
+
+# setup environment
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+
+# install ros packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-melodic-desktop-full=1.4.1-0* \
+    && rm -rf /var/lib/apt/lists/*
+
+# install bootstrap tools
+RUN apt-get update && apt-get install --no-install-recommends -y \
+    build-essential \
+    python-rosdep \
+    python-rosinstall \
+    python-vcstools \
+    && rm -rf /var/lib/apt/lists/*
+
+# bootstrap rosdep
+RUN rosdep init && \
+  rosdep update --rosdistro melodic
+
+##################################################### 
+# rosbridge
+##################################################### 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-melodic-rosbridge-suite \
+    && rm -rf /var/lib/apt/lists/*
+
+##################################################### 
+# gzweb
+##################################################### 
+# install gazebo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ros-melodic-gazebo-* \
+    && rm -rf /var/lib/apt/lists/*
+# install dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libjansson-dev \
+    libboost-dev \
+    imagemagick \
+    libtinyxml-dev \
+    mercurial \
+    cmake \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+# # install nodejs
+# RUN curl -sL https://deb.nodesource.com/setup_17.x -o nodesource_setup.sh && \
+#     bash nodesource_setup.sh && \
+#     rm nodesource_setup.sh
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     nodejs \
+#     && rm -rf /var/lib/apt/lists/*
+# setup gzweb
+RUN cd / && \
+    git clone https://github.com/osrf/gzweb && \
+    sudo /bin/bash -c 'source /usr/share/gazebo/setup.sh; npm run deploy ---'
+# # copy model assets
+# COPY assets.tar.xz /gzweb/http/client/assets.tar.xz
+# COPY models.tar.xz /usr/share/gazebo-11/models.tar.xz
+# RUN cd /gzweb/http/client && \
+#     rm -rf /gzweb/http/client/assets && \
+#     tar -xvf assets.tar.xz && \
+#     rm assets.tar.xz && \
+#     cd /usr/share/gazebo-11 && \
+#     rm -rf /usr/share/gazebo-11/models && \
+#     tar -xvf models.tar.xz && \
+#     rm models.tar.xz
+
+######################
+#   nginx config
+######################
+COPY /foxGlove.conf /etc/nginx/conf.d
+
+
+# ports and volumes
+EXPOSE 8443

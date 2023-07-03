@@ -1,0 +1,3 @@
+/entity_manager:
+  ros__parameters:
+    models_folder: /home/setsuna/Documents/remote_bot_system/mock_bot/fishbot_description/urdf

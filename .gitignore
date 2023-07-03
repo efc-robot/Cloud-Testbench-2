@@ -1,0 +1,12 @@
+frontend/node_modules
+docker_compose/visual_robot/*.tar.xz
+
+*/build
+*/install
+*/log
+
+*.pyc
+*.log
+
+*/__pycache__
+*/build
