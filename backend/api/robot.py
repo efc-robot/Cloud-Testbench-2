@@ -1,6 +1,7 @@
 import uuid
 import os
 import socket
+import logging
 import netifaces as ni
 from fastapi import APIRouter, HTTPException, Depends
 from tortoise.contrib.fastapi import HTTPNotFoundError
@@ -61,27 +62,50 @@ class Form_RobotIdentify(BaseModel):
 
 @router.post("/robot/online" , response_model=Status)
 async def robot_online(data: Form_RobotIdentify):
+    # update heartbeat if robot entity exist
+    robot_entity = robot_manager.get(data.robot_uuid, data.robot_username)
+    if robot_entity is not None:
+        robot_entity.update_heartbeat()
+        return Status(success=True, message="robot sign in system already, update heartbeat")
+    # return fialed if robot not registed
     robot_info = await RobotInfo.get_or_none(uuid=data.robot_uuid)
     ftp_info = await FtpInfo.get_or_none(robot_uuid=data.robot_uuid, username=data.robot_username)
-    
-    ftp_mount_point = ftp_mount_point_manager.get_mount_point_path(data.robot_uuid, data.robot_username)
-    if not os.path.exists(ftp_mount_point):
-        os.makedirs(ftp_mount_point)
     if robot_info is None:
         return Status(success=False, message="robot sign in system fialed, robot not regist in system")
     elif ftp_info is None:
         return Status(success=False, message="robot sign in system fialed, robot username not regist in system")
+    # create robot entity if robot registed
+    ftp_mount_point = ftp_mount_point_manager.get_mount_point_path(data.robot_uuid, data.robot_username)
+    if not os.path.exists(ftp_mount_point):
+        os.makedirs(ftp_mount_point)
+    new_robot = robot_manager.create(robot_info, ftp_info)
+    if new_robot is None:
+        return Status(success=False, message="robot sign in system fialed, error happen durinig create")
     else:
-        robot_entity = robot_manager.get(data.robot_uuid, data.robot_username)
-        if robot_entity is not None:
-            robot_entity.update_heartbeat()
-            return Status(success=True, message="robot sign in system already, update heartbeat")
-        else:
-            new_robot = robot_manager.create(robot_info, ftp_info)
-            if new_robot is None:
-                return Status(success=False, message="robot sign in system fialed, error happen durinig create")
-            else:
-                return Status(success=True, message="robot sign in system seccess")
+        return Status(success=True, message="robot sign in system seccess")
+    # ===============================================================================================================
+    # robot_info = await RobotInfo.get_or_none(uuid=data.robot_uuid)
+    # ftp_info = await FtpInfo.get_or_none(robot_uuid=data.robot_uuid, username=data.robot_username)
+    # 
+    # ftp_mount_point = ftp_mount_point_manager.get_mount_point_path(data.robot_uuid, data.robot_username)
+    # if not os.path.exists(ftp_mount_point):
+    #     os.makedirs(ftp_mount_point)
+    # if robot_info is None:
+    #     return Status(success=False, message="robot sign in system fialed, robot not regist in system")
+    # elif ftp_info is None:
+    #     return Status(success=False, message="robot sign in system fialed, robot username not regist in system")
+    # else:
+    #     robot_entity = robot_manager.get(data.robot_uuid, data.robot_username)
+    #     if robot_entity is not None:
+    #         robot_entity.update_heartbeat()
+    #         return Status(success=True, message="robot sign in system already, update heartbeat")
+    #     else:
+    #         new_robot = robot_manager.create(robot_info, ftp_info)
+    #         if new_robot is None:
+    #             return Status(success=False, message="robot sign in system fialed, error happen durinig create")
+    #         else:
+    #             return Status(success=True, message="robot sign in system seccess")
+    # ===============================================================================================================
         
 
 @router.get(
@@ -117,20 +141,22 @@ async def get_my_robots_info(token_payload: dict = Depends(verify_x_token)):
             robot = robot_manager.get_by_entity_id(entity_id)
             if robot is None:
                 continue
-            robots_info.append(
-                {
-                    "robot_name": robot.name,
-                    "robot_uuid": robot.uuid,
-                    "robot_username": robot.robot_username,
-                    "robot_password": robot.robot_password,
-                    "robot_type": robot.type,
-                    "robot_ip": robot.ip,
-                    "robot_workspace": robot.robot_workspace,
-                    "code_server_workspace": robot.code_server_workspace,
-                    "code_server_port": robot.code_server_port,
-                    "code_server_password": robot.code_server_password
-                }
-            )
+            robot_info = {
+                "robot_name": robot.name,
+                "robot_uuid": robot.uuid,
+                "robot_username": robot.robot_username,
+                "robot_password": robot.robot_password,
+                "robot_type": robot.type,
+                "robot_ip": robot.ip,
+                "robot_workspace": robot.robot_workspace
+            }
+            try:
+                robot_info["code_server_workspace"] = robot.code_server_workspace
+                robot_info["code_server_port"] = robot.code_server_port
+                robot_info["code_server_password"] = robot.code_server_password
+            except Exception as e:
+                logging.warning(f"failed to append robot code server container info, error info :{e}")
+            robots_info.append(robot_info)
         return robots_info
 
 @router.post("/robot/release" , response_model=Status)

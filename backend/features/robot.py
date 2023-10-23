@@ -219,6 +219,7 @@ class Robot:
     #     logging.info(f"robot {self.__entity_id} shutdown")
             
     def update_heartbeat(self) -> None:
+        logging.debug(f"robot [{self.__entity_id}] update heartbeat")
         with self.__lock:
             self.__heartbeat = datetime.datetime.now()
             
@@ -228,18 +229,26 @@ class Robot:
             with self.__lock:
                 delta_time_sec = (current_time - self.__heartbeat).seconds
             if delta_time_sec > self.__destory_timeout:
+                logging.debug(f"robot [{self.__entity_id}] not receive heartbeat for {self.__destory_timeout} sec, destory robot entity")
                 robot_manager.destory(self.uuid, self.robot_username)
                 break
+<<<<<<< HEAD
             if delta_time_sec > self.__heartbeat_timeout_sec:
                 online = False
             else:
                 online = True
             if online and (not self.__online):
+=======
+            online_now = delta_time_sec < self.__heartbeat_timeout_sec
+            if online_now == self.__online:
+                pass
+            elif online_now:
+>>>>>>> e141c1c8cb30567bf4cad567ead5b657737f2937
                 logging.info(f"robot {self.uuid} online")
-                self.__online = True
-            elif (not online) and self.__online:
+            else:
                 logging.info(f"robot {self.uuid} offline")
-                self.__online = False
+            with self.__lock:
+                self.__online = online_now
             time.sleep(self.__heartbeat_check_interval)
             
     def __start_online_status_refresh(self):
@@ -369,13 +378,19 @@ class RobotManager:
     def destory(self, robot_uuid:str, robot_username:str) -> None:
         entity_id = self.get_entity_id(robot_uuid, robot_username)
         robot = self.__get(entity_id)
+        # return if robot not exsist
         if robot is None:
             logging.debug(f"robot [{entity_id}] not created yet, terminate destory process")
-        else:
-            robot.shutdown()
-            with self.__lock:
-                del self.__robots[entity_id]
-            logging.info(f"destory robot [{entity_id}] success")
+            return
+        # deallocate bot if allocated
+        if self.__is_bot_allocated(robot):
+            self.deallocate(robot_uuid, robot_username)
+        # shutdown bot
+        robot.shutdown()
+        # unregister bot
+        with self.__lock:
+            del self.__robots[entity_id]
+        logging.info(f"destory robot [{entity_id}] success")
             
     def __is_bot_allocated(self, robot:Robot) -> bool:
         if robot.user_uuid is not None:
@@ -402,6 +417,11 @@ class RobotManager:
             return False
         else:
             robot.set_user(user_uuid)
+<<<<<<< HEAD
+=======
+            container_name = f"codeServer.usr_{user_uuid}.bot_{robot_uuid}.botUsr_{robot_username}.{datetime.datetime.now().timestamp()}"
+            robot.create_code_server_container(password, workspace, name=container_name)
+>>>>>>> e141c1c8cb30567bf4cad567ead5b657737f2937
             logging.info(f"robot allocate success, robot entity [{entity_id}] allocated to user [{user_uuid}]")
             return True
         
