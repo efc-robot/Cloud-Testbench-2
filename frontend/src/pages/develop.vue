@@ -1,7 +1,7 @@
 <script setup>
     import { ElMessage } from 'element-plus'
     import {BASE_URL} from "@/config/api.js"
-    import {HOST} from "@/config/backend.js"
+    import {K8S_HOST} from "@/config/backend.js"
     import {
         RemoveFilled,
         CirclePlusFilled
@@ -100,6 +100,7 @@
                 </el-form-item>
                 <el-form-item label="vscode-web密码"><el-input v-model="vBotConfig.password" placeholder="设置vscode-web登录密码" /></el-form-item>
                 <el-form-item label="默认工作目录"><el-input v-model="vBotConfig.default_workspace" placeholder="设置vscode-web默认工作目录" /></el-form-item>
+                <el-form-item label="command"><el-input v-model="vBotConfig.command" placeholder="设置容器的command" /></el-form-item>
                 <el-form-item label="开放端口">
                     <el-input
                         style="width:150px;margin:0 5px 5px 0;" 
@@ -154,6 +155,18 @@ export default {
             allowCreateVBotReq: true,
             tmpValue_exposePort: null,
             dockerImageOptions: [
+                {
+                    name: 'ubuntu:18.04',
+                    description: 'ubuntu 18.04',
+                },
+                {
+                    name: 'ubuntu:20.04',
+                    description: 'ubuntu 20.04',
+                },
+                {
+                    name: 'lscr.io/linuxserver/code-server:latest',
+                    description: 'vscode',
+                },
                 {
                     name: 'ros:cloud_test_bench',
                     description: '系统：ubuntu20.04，ROS1版本：noetic，ROS2版本：galactic，foxy',
@@ -285,7 +298,7 @@ export default {
             this.openServerService(service_port)
         },
         openServerService(service_port) {
-            let url = "http://" + HOST + ":" + service_port
+            let url = "http://" + K8S_HOST + ":" + service_port
             window.open(url)
         },
         addExposePorts(port) {

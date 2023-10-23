@@ -1,12 +1,13 @@
 import logging
 import threading
 from typing import Dict, List, Union, Optional
-import socket
-import docker
-from docker.models.containers import Container
-from docker.models.networks import Network
-from docker.client import DockerClient
-from features.port_allocator import port_allocator
+# import socket
+# import docker
+# from docker.models.containers import Container
+# from docker.models.networks import Network
+# from docker.client import DockerClient
+# from features.port_allocator import port_allocator
+from features.k8s import create_k8sSimpleDeploy, K8sSimpleDeploy
 from pydantic import BaseModel
 
 
@@ -20,6 +21,8 @@ class VirtualBot:
     __docker_image: str
     __container_id: str
     
+    __k8s_deploy: K8sSimpleDeploy
+    
     def __init__(
         self, 
         name:str,
@@ -27,52 +30,82 @@ class VirtualBot:
         sudo_password:Union[str, None] = None,
         default_workspace:str = None,
         expose_ports: List[int] = [],
-        docker_image:str = "ros:cloud_test_bench"
+        docker_image:str = "ros:cloud_test_bench", 
+        entrypoint:str = None
     ) -> None:
         logging.debug(f"start to create virtual robot[name:{name}, default_workspace:{default_workspace}]")
         try:
+            # # set environment
+            # environment = []
+            # environment.append(F"SERVICE_PORT={port_allocator.get()}")
+            # if password is not None:
+            #     environment.append(f"PASSWORD={password}")
+            # if sudo_password is not None:
+            #     environment.append(f"SUDO_PASSWORD={sudo_password}")
+            # if default_workspace is not None:
+            #     environment.append(f"DEFAULT_WORKSPACE={default_workspace}")
+            # # set expose ports
+            # ports = {}
+            # if not 8443 in expose_ports:
+            #     expose_ports.append(8443)
+            # if not 9091 in expose_ports:
+            #     expose_ports.append(9091)
+            # host_ports = port_allocator.get_free_ports(len(expose_ports))
+            # for i,  expose_port in enumerate(expose_ports):
+            #     ports[f"{expose_port}"] = host_ports[i]
+            # # create container
+            # docker_client:DockerClient = docker.from_env()
+            # new_container:Container = docker_client.containers.run(
+            #     image = docker_image, 
+            #     environment = environment,
+            #     ports = ports, 
+            #     privileged = True, 
+            #     detach = True,
+            #     network_mode = "bridge"
+            # )
+            # # connect to macvlan network
+            # macvlan_network:Network = docker_client.networks.get('macvlan')
+            # macvlan_network.connect(new_container)
+            # # set prooerty
+            # self.__name = name
+            # self.__password = password
+            # self.__sudo_password = sudo_password
+            # self.__default_workspace = default_workspace
+            # self.__ports = ports
+            # self.__container_id = new_container.id
+            # self.__docker_image = docker_image
+            # # close docker client
+            # docker_client.close()
+            # logging.debug(f"create new virtual robot success, id:{self.__container_id}")
+            
             # set environment
-            environment = []
-            environment.append(F"SERVICE_PORT={port_allocator.get()}")
+            environment = {}
             if password is not None:
-                environment.append(f"PASSWORD={password}")
-            if sudo_password is not None:
-                environment.append(f"SUDO_PASSWORD={sudo_password}")
-            if default_workspace is not None:
-                environment.append(f"DEFAULT_WORKSPACE={default_workspace}")
-            # set expose ports
-            ports = {}
-            if not 8443 in expose_ports:
-                expose_ports.append(8443)
-            if not 9091 in expose_ports:
-                expose_ports.append(9091)
-            host_ports = port_allocator.get_free_ports(len(expose_ports))
-            for i,  expose_port in enumerate(expose_ports):
-                ports[f"{expose_port}"] = host_ports[i]
-            # create container
-            docker_client:DockerClient = docker.from_env()
-            new_container:Container = docker_client.containers.run(
-                image = docker_image, 
-                environment = environment,
-                ports = ports, 
-                privileged = True, 
-                detach = True,
-                network_mode = "bridge"
-            )
-            # connect to macvlan network
-            macvlan_network:Network = docker_client.networks.get('macvlan')
-            macvlan_network.connect(new_container)
-            # set prooerty
-            self.__name = name
-            self.__password = password
-            self.__sudo_password = sudo_password
-            self.__default_workspace = default_workspace
-            self.__ports = ports
-            self.__container_id = new_container.id
-            self.__docker_image = docker_image
-            # close docker client
-            docker_client.close()
-            logging.debug(f"create new virtual robot success, id:{self.__container_id}")
+                environment["PASSWORD"] = password
+            if password is not None:
+                environment["SUDO_PASSWORD"] = sudo_password
+            if password is not None:
+                environment["DEFAULT_WORKSPACE"] = default_workspace
+            # create k8s deploy
+            k8s_deploy_name = f"visual-bot-{name}"
+            self.__k8s_deploy = create_k8sSimpleDeploy(k8s_deploy_name, docker_image, expose_ports, environment, command)
+            if self.__k8s_deploy is None:
+                raise Exception("create k8s deployment failed")
+            else:
+                # record ports mapping
+                self.__ports = {}
+                for mapping_info in self.__k8s_deploy.ports_mapping:
+                    container_port = mapping_info.target_port
+                    node_port = mapping_info.node_port
+                    self.__ports[f"{container_port}"] = node_port
+                # set prooerty
+                self.__name = name
+                self.__password = password
+                self.__sudo_password = sudo_password
+                self.__default_workspace = default_workspace
+                self.__container_id = self.__k8s_deploy.pod_name
+                self.__docker_image = docker_image
+                logging.debug(f"create new virtual robot success, id:{self.__container_id}")
         except Exception as e:
             logging.debug(f"create new virtual robot failed: {e}")
         
@@ -105,15 +138,16 @@ class VirtualBot:
         return self.__docker_image
     
     def destory(self) -> None:
-        docker_client:DockerClient = docker.from_env()
-        # disconnect container from macvlan network
-        container = docker_client.containers.get(self.__container_id)
-        macvlan_network:Network = docker_client.networks.get('macvlan')
-        macvlan_network.disconnect(container)
-        # remove container
-        docker_client.api.remove_container(container=self.__container_id, force=True)
-        # close client
-        docker_client.close()
+        # docker_client:DockerClient = docker.from_env()
+        # # disconnect container from macvlan network
+        # container = docker_client.containers.get(self.__container_id)
+        # macvlan_network:Network = docker_client.networks.get('macvlan')
+        # macvlan_network.disconnect(container)
+        # # remove container
+        # docker_client.api.remove_container(container=self.__container_id, force=True)
+        # # close client
+        # docker_client.close()
+        self.__k8s_deploy.destory()
         
         
 class VirtualBotRecord(BaseModel):
@@ -146,14 +180,15 @@ class VirtualBotManager:
         sudo_password:Union[str, None] = None,
         default_workspace:str = "/",
         expose_ports: List[int] = [],
-        docker_image:str = "ros:cloud_test_bench"
+        docker_image:str = "ros:cloud_test_bench",
+        command:str = None
     ) -> Union[VirtualBot, None]:
         logging.info(f"create new virtual robot")
         try:
             new_vBot:VirtualBot = VirtualBot(
                 name=name, password=password, sudo_password=sudo_password,
                 expose_ports=expose_ports, default_workspace=default_workspace,
-                docker_image=docker_image
+                docker_image=docker_image, command=command
             )
             self.__register(new_vBot, owner)
             return new_vBot

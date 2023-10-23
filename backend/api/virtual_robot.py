@@ -17,6 +17,7 @@ class VisualBotConfig(BaseModel):
     expose_ports: Optional[List[int]]
     default_workspace: Optional[str]
     docker_image: Optional[str]
+    command: Optional[str]
     
     
 class VisualBotIn_Pydantic_Del(BaseModel):

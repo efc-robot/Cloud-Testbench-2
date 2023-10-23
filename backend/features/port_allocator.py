@@ -97,10 +97,10 @@ class PortAllocator:
         self.__stop_ports_scan()
                 
                 
-port_allocator = PortAllocator()
+# port_allocator = PortAllocator()
                 
                 
 if __name__ == "__main__":
         while True:
-            port_allocator.get_free_ports(5)
+            # port_allocator.get_free_ports(5)
             time.sleep(5)
