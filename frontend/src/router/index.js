@@ -61,10 +61,61 @@ const routes = [
     name: 'issues',
     component: issues
   },
+  // {
+  //   path: '/documentation/intro',
+  //   name: 'documentation',
+  //   component: documentation
+  // },
   {
     path: '/documentation',
     name: 'documentation',
-    component: documentation
+    component: documentation,
+    children: [
+      { path: 'markdown/intro', component: documentation, },
+      {
+        path: 'markdown/real_robot',
+        component: documentation,
+        children: [
+          { path: 'access_cloud_testbench', component: documentation, },
+          { path: 'apply_and_use', component: documentation, },
+        ]
+      },
+      {
+        path: 'markdown/visual_robot',
+        component: documentation,
+        children: [
+          { path: 'intro', component: documentation, },
+          { path: 'usage', component: documentation, },
+          { path: 'ros_master', component: documentation, },
+          { path: 'gzweb', component: documentation, },
+        ]
+      },
+      {
+        path: 'markdown/seafile',
+        component: documentation,
+        children: [
+          { path: 'usage', component: documentation, },
+          { path: 'webdav', component: documentation, },
+        ]
+      },
+      {
+        path: 'markdown/foxglove',
+        component: documentation,
+        children: [
+          { path: 'intro', component: documentation, },
+          { path: 'quick_start', component: documentation, },
+        ],
+      },
+      {
+        path: 'markdown/optitrack',
+        component: documentation,
+        children: [
+          { path: 'intro', component: documentation, },
+          { path: 'quick_start', component: documentation, },
+          { path: 'vrpn_client', component: documentation, },
+        ],
+      },
+    ]
   },
   {
     path: '/issues',

@@ -111,8 +111,12 @@ export default {
             })
             .then(res => {
                 console.log(res)
+                if(res.data.success) {
+                    ElMessage.success("设备申请成功")
+                } else {
+                    ElMessage.error("设备申请失败")
+                }
                 this.getTableData()
-                ElMessage.success("设备申请成功")
             })
             .catch(error => {
                 console.log(error)

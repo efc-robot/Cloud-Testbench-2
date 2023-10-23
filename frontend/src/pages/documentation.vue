@@ -17,11 +17,16 @@ export default {
     mounted() {
         this.loadMarkdownFile();
     },
+    watch: {
+        '$route':'loadMarkdownFile'
+    },
     methods: {
         async loadMarkdownFile() {
+            let router = this.$route.path;
+            let url = BASE_URL + '/files' + router + '.md';
             axios({
                 method: "get",
-                url: BASE_URL + '/files/documentation/doc.md'
+                url: url
             })
             .then(res => {
                 const markdownContent = marked(res.data);
@@ -31,7 +36,7 @@ export default {
                 console.log(error)
                 ElMessage.error(error.response.data.detail)
             })
-        }
+        },
     },
 }
 </script>
