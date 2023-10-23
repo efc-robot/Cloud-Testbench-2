@@ -232,18 +232,10 @@ class Robot:
                 logging.debug(f"robot [{self.__entity_id}] not receive heartbeat for {self.__destory_timeout} sec, destory robot entity")
                 robot_manager.destory(self.uuid, self.robot_username)
                 break
-<<<<<<< HEAD
-            if delta_time_sec > self.__heartbeat_timeout_sec:
-                online = False
-            else:
-                online = True
-            if online and (not self.__online):
-=======
             online_now = delta_time_sec < self.__heartbeat_timeout_sec
             if online_now == self.__online:
                 pass
             elif online_now:
->>>>>>> e141c1c8cb30567bf4cad567ead5b657737f2937
                 logging.info(f"robot {self.uuid} online")
             else:
                 logging.info(f"robot {self.uuid} offline")
@@ -417,11 +409,6 @@ class RobotManager:
             return False
         else:
             robot.set_user(user_uuid)
-<<<<<<< HEAD
-=======
-            container_name = f"codeServer.usr_{user_uuid}.bot_{robot_uuid}.botUsr_{robot_username}.{datetime.datetime.now().timestamp()}"
-            robot.create_code_server_container(password, workspace, name=container_name)
->>>>>>> e141c1c8cb30567bf4cad567ead5b657737f2937
             logging.info(f"robot allocate success, robot entity [{entity_id}] allocated to user [{user_uuid}]")
             return True
         
