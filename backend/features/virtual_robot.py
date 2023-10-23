@@ -31,7 +31,7 @@ class VirtualBot:
         default_workspace:str = None,
         expose_ports: List[int] = [],
         docker_image:str = "ros:cloud_test_bench", 
-        entrypoint:str = None
+        command:str = None
     ) -> None:
         logging.debug(f"start to create virtual robot[name:{name}, default_workspace:{default_workspace}]")
         try:
