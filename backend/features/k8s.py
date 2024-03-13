@@ -139,7 +139,10 @@ def create_k8sSimpleDeploy(
                     "env": [{"name": key, "value": value} for key, value in container_env.items()],
                 }
             ],
-            "imagePullSecrets": [{"name": "harbor-secret"}]
+            "imagePullSecrets": [{"name": "harbor-secret"}],
+            "dnsConfig": {
+                "nameservers": ["8.8.8.8",],
+            },
         }
     }
     # config nfs mount
